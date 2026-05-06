@@ -3,8 +3,8 @@ from pydantic import BaseModel
 from typing import List
 import psycopg2
 import os
-
-app = FastAPI(title="Service de Gestion des Livres")
+import time
+from contextlib import asynccontextmanager
 
 # --- MODÈLE DE DONNÉES ---
 class Book(BaseModel):
@@ -20,6 +20,7 @@ DB_USER = os.getenv("POSTGRES_USER", "dit_user")
 DB_PASS = os.getenv("POSTGRES_PASSWORD", "dit_password")
 
 def get_db_connection():
+    """Établit une connexion à PostgreSQL."""
     return psycopg2.connect(
         host=DB_HOST, 
         database=DB_NAME, 
@@ -27,23 +28,49 @@ def get_db_connection():
         password=DB_PASS
     )
 
-# --- INITIALISATION AU DÉMARRAGE ---
-@app.on_event("startup")
-def startup_event():
-    """Crée la table au lancement si elle n'existe pas."""
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS livres (
-            id SERIAL PRIMARY KEY,
-            titre VARCHAR(100) NOT NULL,
-            auteur VARCHAR(100) NOT NULL,
-            categorie VARCHAR(50)
-        );
-    ''')
-    conn.commit()
-    cur.close()
-    conn.close()
+# --- GESTIONNAIRE DE VIE (LIFESPAN) ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Gère le démarrage et la fermeture de l'application.
+    Remplace avantageusement @app.on_event("startup").
+    """
+    retries = 10
+    conn = None
+    print("🚀 Démarrage du service Livres...")
+    
+    while retries > 0:
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS livres (
+                    id SERIAL PRIMARY KEY,
+                    titre VARCHAR(100) NOT NULL,
+                    auteur VARCHAR(100) NOT NULL,
+                    categorie VARCHAR(50)
+                );
+            ''')
+            conn.commit()
+            cur.close()
+            conn.close()
+            print("✅ Connexion à PostgreSQL réussie et table vérifiée !")
+            break
+        except Exception as e:
+            retries -= 1
+            print(f"⌛ En attente de la base de données... ({retries} essais restants)")
+            time.sleep(5)
+    
+    if retries == 0:
+        print("❌ Impossible de se connecter à la base de données. Fermeture.")
+        # Le conteneur s'arrêtera proprement ici s'il ne peut pas se connecter
+    
+    yield  # L'application tourne ici
+    
+    print("👋 Fermeture du service Livres...")
+
+# --- INITIALISATION DE L'APP ---
+app = FastAPI(title="Service de Gestion des Livres", lifespan=lifespan)
 
 # --- ENDPOINTS API ---
 
