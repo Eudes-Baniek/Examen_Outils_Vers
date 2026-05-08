@@ -1,8 +1,8 @@
-# 📚 Bibliothèque Numérique — DIT
+# Bibliothèque Numérique — DIT
 
 Plateforme complète de gestion de bibliothèque académique avec système de recommandation.
 
-## 🏗️ Architecture
+##  Architecture
 
 | Service         | Technologie      | Port |
 |-----------------|------------------|------|
@@ -13,7 +13,7 @@ Plateforme complète de gestion de bibliothèque académique avec système de re
 | Recommandation  | FastAPI + SVD    | 8004 |
 | Base de données | PostgreSQL 15    | 5432 |
 
-## 🚀 Lancement rapide
+## Lancement rapide
 
 ```bash
 # 1. Cloner et configurer
@@ -38,7 +38,7 @@ Host : db
 Port : 5432
 Database : bibliotheque
 
-## 🗄️ Base de données
+##  Base de données
 Les bases sont créées automatiquement via `scripts/init_db.sql`.
 IL ya  des données de test dans : `scripts/insert_livres.sql`.
 
@@ -102,7 +102,7 @@ dvc metrics diff HEAD~1
 dvc push
 ```
 
-## 📡 Endpoints principaux
+## Endpoints principaux
 
 ### Livres (http://localhost:8001)
 | Méthode | URL | Description |
@@ -144,7 +144,7 @@ dvc push
 | GET | /model/info | Info modèle |
 | GET | /docs | Documentation Swagger |
 
-## 🔧 Git — Workflow recommandé
+## Git — Workflow recommandé
 
 ```bash
 # Branches
@@ -163,7 +163,7 @@ git merge --no-ff feature/service-livres
 git tag -a v1.0.0 -m "Version initiale"
 ```
 
-## 📦 Structure du projet
+##  Structure du projet
 ```
 bibliotheque-DIT/
 ├── docker-compose.yml
