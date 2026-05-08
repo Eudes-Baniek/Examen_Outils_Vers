@@ -1,0 +1,198 @@
+networks:
+  biblio-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  model_data:
+  loans_data:
+  pgadmin_data:
+
+services:
+
+  # ─────────────────────────────
+  # BASE DE DONNÉES UNIQUE
+  # ─────────────────────────────
+  db:
+    image: postgres:15-alpine
+    container_name: biblio_db
+
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: bibliotheque
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    ports:
+      - "5432:5432"
+
+    networks:
+      - biblio-network
+
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U admin -d bibliotheque" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────
+  # LIVRES
+  # ─────────────────────────────
+  livres:
+    build:
+      context: ./services/livres
+      dockerfile: Dockerfile
+
+    container_name: biblio_livres
+
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: bibliotheque
+      DB_USER: admin
+      DB_PASSWORD: admin123
+
+    ports:
+      - "8001:8001"
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    networks:
+      - biblio-network
+
+  # ─────────────────────────────
+  # UTILISATEURS
+  # ─────────────────────────────
+  utilisateurs:
+    build:
+      context: ./services/utilisateurs
+      dockerfile: Dockerfile
+
+    container_name: biblio_utilisateurs
+
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: bibliotheque
+      DB_USER: admin
+      DB_PASSWORD: admin123
+
+    ports:
+      - "8002:8002"
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    networks:
+      - biblio-network
+
+  # ─────────────────────────────
+  # EMPRUNTS
+  # ─────────────────────────────
+  emprunts:
+    build:
+      context: ./services/emprunts
+      dockerfile: Dockerfile
+
+    container_name: biblio_emprunts
+
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: bibliotheque
+      DB_USER: admin
+      DB_PASSWORD: admin123
+
+      LIVRES_SERVICE_URL: http://livres:8001
+      USERS_SERVICE_URL: http://utilisateurs:8002
+
+    ports:
+      - "8003:8003"
+
+    depends_on:
+      db:
+        condition: service_healthy
+      livres:
+        condition: service_started
+      utilisateurs:
+        condition: service_started
+
+    volumes:
+      - loans_data:/app/exports
+
+    networks:
+      - biblio-network
+
+  # ─────────────────────────────
+  # RECOMMANDATION (FASTAPI)
+  # ─────────────────────────────
+  recommandation:
+    build:
+      context: ./services/recommandation
+      dockerfile: Dockerfile
+
+    container_name: biblio_reco
+
+    ports:
+      - "8004:8004"
+
+    environment:
+      MODEL_PATH: /app/models/model.pkl
+      DATA_PATH: /app/data/loans.csv
+
+    volumes:
+      - model_data:/app/models
+      - loans_data:/app/data
+
+    networks:
+      - biblio-network
+
+  # ─────────────────────────────
+  # FRONTEND
+  # ─────────────────────────────
+  frontend:
+    build:
+      context: ./services/frontend
+      dockerfile: Dockerfile
+
+    container_name: biblio_frontend
+
+    ports:
+      - "80:80"
+
+    depends_on:
+      - livres
+      - utilisateurs
+      - emprunts
+      - recommandation
+
+    networks:
+      - biblio-network
+
+  # ─────────────────────────────
+  # PGADMIN
+  # ─────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: biblio_pgadmin
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@biblio.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+
+    ports:
+      - "5050:80"
+
+    depends_on:
+      - db
+
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+    networks:
+      - biblio-network

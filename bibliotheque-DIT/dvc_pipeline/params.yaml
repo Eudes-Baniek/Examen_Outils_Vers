@@ -1,0 +1,12 @@
+model:
+  type: SVD        # SVD ou KNN
+  n_factors: 50
+  n_epochs: 20
+  lr_all: 0.005
+  reg_all: 0.02
+  k: 20            # pour KNN uniquement
+
+data:
+  test_size: 0.2
+  random_state: 42
+  min_interactions: 1
