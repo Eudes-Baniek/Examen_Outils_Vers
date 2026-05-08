@@ -19,28 +19,60 @@ Plateforme complète de gestion de bibliothèque académique avec système de re
 # 1. Cloner et configurer
 git clone <repo-url>
 cd bibliotheque-DIT
-cp .env.example .env
 
 # 2. Lancer tous les services
-docker compose --profile dev up --build
+docker compose --profile dev up --build -d
 
-# 3. Accéder à l'application
-# Frontend  → http://localhost
-# API Docs  → http://localhost:8004/docs
-```
+
+## PgAdmin
+
+### URL :
+http://localhost:5050
+
+### Connexion :
+Email : admin@biblio.com
+Password : admin123
+
+### Serveur PostgreSQL :
+Host : db
+Port : 5432
+Database : bibliotheque
 
 ## 🗄️ Base de données
-
 Les bases sont créées automatiquement via `scripts/init_db.sql`.
-Pour ajouter des données de test :
+IL ya  des données de test dans : `scripts/insert_livres.sql`.
 
+# Pour lancer les données de tests
 ```bash
-docker exec -it biblio_livres python manage.py shell
-# puis créer des objets via l'ORM Django
+docker exec -i biblio_db psql -U admin -d biblio_db < scripts/insert_livres.sql
+
+```
+## Migrations Django
+Création des migrations
+```bash
+    docker compose exec livres python manage.py makemigrations
+    docker compose exec utilisateurs python manage.py makemigrations
+    docker compose exec emprunts python manage.py makemigrations
+```
+Application des migrations
+```bash
+    docker compose exec livres python manage.py migrate
+    docker compose exec utilisateurs python manage.py migrate
+    docker compose exec emprunts python manage.py migrate
 ```
 
-## 🤖 Pipeline DVC
+## Points importants
+Une seule base PostgreSQL : bibliotheque
+Tous les microservices utilisent cette base
+Les migrations doivent être exécutées avant utilisation
+Docker doit être relancé après modification des modèles Django
 
+#  Accéder à l'application
+### URL : Frontend  →
+http://localhost:80
+
+
+##  Pipeline DVC
 ```bash
 # Installer DVC
 pip install dvc dvc-gdrive
