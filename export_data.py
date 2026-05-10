@@ -7,7 +7,7 @@ def export_to_json():
         conn = psycopg2.connect(
             host="localhost",
             port="5433", # Le port exposé dans ton docker-compose
-            database="bibliotheque_db",
+            database="library_db",
             user="user",
             password="password"
         )

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bibliothèque DIT - Système Microservices</title>
+    <style>
+        :root { --primary: #2563eb; --dark: #1e293b; --success: #10b981; --error: #ef4444; --bg: #f8fafc; --ia: #8b5cf6; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; color: #334155; }
+        
+        #auth-overlay { position: fixed; inset: 0; background: #0f172a; display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .auth-card { background: white; padding: 35px; border-radius: 16px; width: 100%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); text-align: center; }
+        
+        #main-dashboard { display: none; }
+        .header { background: var(--dark); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        
+        .container { max-width: 1400px; margin: 2rem auto; display: grid; grid-template-columns: 350px 1fr; gap: 2rem; padding: 0 1rem; }
+        
+        .card { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; margin-bottom: 1.5rem; }
+        .card h3 { margin-top: 0; display: flex; align-items: center; gap: 10px; font-size: 1.1rem; }
+
+        input, select { width: 100%; padding: 10px; margin: 8px 0; border: 1.5px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-ia { background: var(--ia); color: white; }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; font-size: 0.75rem; color: #64748b; text-transform: uppercase; padding: 12px; border-bottom: 2px solid #f1f5f9; }
+        td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
+        
+        .action-btns { display: flex; gap: 5px; }
+        .btn-small { width: auto; padding: 5px 8px; font-size: 0.7rem; }
+        
+        #reco-list { list-style: none; padding: 0; }
+        #reco-list li { padding: 10px; border-left: 3px solid var(--ia); background: #f5f3ff; margin-bottom: 5px; border-radius: 0 5px 5px 0; font-size: 0.85rem; }
+        
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: bold; background: #e2e8f0; }
+        .status-active { background: #dcfce7; color: #166534; }
+    </style>
+</head>
+<body>
+
+<div id="auth-overlay">
+    <div class="auth-card">
+        <h2>Bibliothèque DIT</h2>
+        <p id="auth-status">Entrez votre Nom ou votre ID</p>
+        <input type="text" id="login_input" placeholder="Ex: 1 ou Baniek Eudes">
+        <div id="creation-fields" style="display:none;">
+            <select id="reg_role">
+                <option value="Étudiant">Étudiant</option>
+                <option value="Professeur">Professeur</option>
+            </select>
+        </div>
+        <button id="main-auth-btn" class="btn-primary" onclick="handleAuth()">Accéder à l'espace</button>
+    </div>
+</div>
+
+<div id="main-dashboard">
+    <div class="header">
+        <div>👋 Bonjour, <b id="user-name"></b> | ID: <span id="user-id-display"></span></div>
+        <button onclick="location.reload()" style="width:auto; background:var(--error); font-size: 0.8rem;">Déconnexion</button>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="card">
+                <h3>🔍 Recherche</h3>
+                <input type="text" id="search_q" placeholder="Titre, auteur..." onkeyup="searchBooks()">
+            </div>
+
+            <div class="card">
+                <h3>➕ Ajouter un Livre</h3>
+                <input type="text" id="new_titre" placeholder="Titre / ISBN">
+                <input type="text" id="new_auteur" placeholder="Auteur">
+                <input type="text" id="new_cat" placeholder="Catégorie">
+                <button class="btn-primary" onclick="addBook()">Ajouter au catalogue</button>
+            </div>
+
+            <div class="card" id="card-reco" style="border-top: 4px solid var(--ia);">
+                <h3>🤖 Recommandations IA</h3>
+                <div id="reco-status" style="font-size: 0.8rem; color: #64748b; margin-bottom: 10px;">Suggestions basées sur votre profil :</div>
+                <ul id="reco-list"></ul>
+                <button class="btn-ia btn-small" style="margin-top: 10px;" onclick="triggerTrain()">Réentraîner l'IA (DVC)</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="card" style="margin-bottom: 1rem;">
+                <h3>🔄 Action en cours</h3>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="number" id="loan_book_id" placeholder="ID du livre sélectionné" readonly>
+                    <button class="btn-success" style="width: 200px;" onclick="executeLoan()">Emprunter ce livre</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>📚 Catalogue des Livres</h3>
+                <table id="table-books">
+                    <thead>
+                        <tr><th>ID</th><th>Titre / ISBN</th><th>Auteur</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="card" style="margin-top: 2rem;">
+                <h3>📋 Historique des Emprunts</h3>
+                <table id="table-history">
+                    <thead>
+                        <tr><th>Livre ID</th><th>Date Emprunt</th><th>Statut</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="3" style="text-align:center; color:#94a3b8;">Aucun emprunt récent</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_USERS = "http://localhost:8000";
+    const API_BOOKS = "http://localhost:8001";
+    const API_LOANS = "http://localhost:8003";
+    const API_RECO  = "http://localhost:8004";
+
+    let currentUser = null;
+    let isRegisterStep = false;
+
+    async function handleAuth() {
+        const val = document.getElementById('login_input').value.trim();
+        if(!val) return;
+        if (!isRegisterStep) {
+            try {
+                const res = await fetch(`${API_USERS}/users/check/${encodeURIComponent(val)}`);
+                if (res.ok) loginSuccess(await res.json());
+                else if (res.status === 404) {
+                    isRegisterStep = true;
+                    document.getElementById('creation-fields').style.display = "block";
+                    document.getElementById('auth-status').innerText = "Nouvel utilisateur ? Choisissez un profil :";
+                }
+            } catch(e) { alert("Service Utilisateurs indisponible."); }
+        } else {
+            const role = document.getElementById('reg_role').value;
+            const res = await fetch(`${API_USERS}/users`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nom: val, type_utilisateur: role })
+            });
+            if (res.ok) loginSuccess(await res.json());
+        }
+    }
+
+    function loginSuccess(user) {
+        currentUser = user;
+        document.getElementById('user-name').innerText = user.nom;
+        document.getElementById('user-id-display').innerText = user.id;
+        document.getElementById('auth-overlay').style.display = 'none';
+        document.getElementById('main-dashboard').style.display = 'block';
+        loadBooks();
+        loadHistory();
+        getRecommendations(user.id);
+    }
+
+    async function loadBooks() {
+        const res = await fetch(`${API_BOOKS}/books`);
+        if (res.ok) renderBooks(await res.json());
+    }
+
+    function renderBooks(books) {
+        const tbody = document.querySelector("#table-books tbody");
+        tbody.innerHTML = books.map(b => `
+            <tr>
+                <td>${b.id}</td>
+                <td><b>${b.titre}</b></td>
+                <td>${b.auteur}</td>
+                <td class="action-btns">
+                    <button class="btn-primary btn-small" onclick="selectBook(${b.id})">Choisir</button>
+                    <button class="btn-small" style="background:var(--error); color:white;" onclick="deleteBook(${b.id})">🗑️</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function selectBook(id) {
+        document.getElementById('loan_book_id').value = id;
+    }
+
+    async function getRecommendations(userId) {
+        const list = document.getElementById('reco-list');
+        list.innerHTML = "<li>Calcul IA...</li>";
+        try {
+            const res = await fetch(`${API_RECO}/recommendations/${userId}?t=${Date.now()}`);
+            if (res.ok) {
+                const recos = await res.json();
+                if(recos.length > 0) {
+                    list.innerHTML = recos.map(r => `<li><b>${r.titre}</b><br><small>Score de pertinence IA</small></li>`).join('');
+                } else { list.innerHTML = "<li>Pas assez de données pour l'IA.</li>"; }
+            }
+        } catch(e) { list.innerHTML = "<li>Modèle ML indisponible.</li>"; }
+    }
+
+    async function triggerTrain() {
+        if(!confirm("Lancer dvc repro pour mettre à jour le modèle ?")) return;
+        try {
+            const res = await fetch(`${API_RECO}/train`, { method: 'POST' });
+            if(res.ok) alert("Pipeline DVC déclenché !");
+        } catch(e) { alert("Erreur lors du déclenchement DVC."); }
+    }
+
+    async function searchBooks() {
+        const q = document.getElementById('search_q').value;
+        const res = await fetch(`${API_BOOKS}/search?q=${encodeURIComponent(q)}`);
+        renderBooks(await res.json());
+    }
+
+    async function addBook() {
+        const t = document.getElementById('new_titre'), a = document.getElementById('new_auteur'), c = document.getElementById('new_cat');
+        const res = await fetch(`${API_BOOKS}/books`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ titre: t.value, auteur: a.value, categorie: c.value })
+        });
+        if(res.ok) { t.value = ""; a.value = ""; c.value = ""; loadBooks(); }
+    }
+
+    async function deleteBook(id) {
+        if(confirm("Supprimer ce livre ?")) { await fetch(`${API_BOOKS}/books/${id}`, { method: 'DELETE' }); loadBooks(); }
+    }
+
+    async function executeLoan() {
+        const bookId = document.getElementById('loan_book_id').value;
+        if(!bookId) return alert("Sélectionnez un livre.");
+        const res = await fetch(`${API_LOANS}/loans`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: currentUser.id, book_id: parseInt(bookId) })
+        });
+        if(res.ok) { 
+            alert("Emprunt réussi !"); 
+            document.getElementById('loan_book_id').value = ""; 
+            loadHistory();
+            getRecommendations(currentUser.id);
+        }
+    }
+
+    async function loadHistory() {
+        try {
+            const res = await fetch(`${API_LOANS}/loans/user/${currentUser.id}`);
+            if (res.ok) {
+                const history = await res.json();
+                const tbody = document.querySelector("#table-history tbody");
+                if(history.length > 0) {
+                    tbody.innerHTML = history.map(h => `
+                        <tr>
+                            <td>Livre #${h.book_id}</td>
+                            <td>${new Date().toLocaleDateString()}</td>
+                            <td><span class="status-badge status-active">Actif</span></td>
+                        </tr>`).join('');
+                }
+            }
+        } catch(e) { console.log("Historique injoignable"); }
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+schema: '2.0'
+stages:
+  preprocess:
+    cmd: py scripts/preprocess.py
+    deps:
+    - path: data/loans.csv
+      hash: md5
+      md5: bedf5a1d61f9294022615df18e6124b6
+      size: 57
+    - path: scripts/preprocess.py
+      hash: md5
+      md5: 6f38c91bc19f14899f0de61671873051
+      size: 760
+    outs:
+    - path: data/loans_clean.csv
+      hash: md5
+      md5: 20e83258a49f2ef654fe2a9d752ea2e3
+      size: 59
+  train:
+    cmd: py scripts/train.py
+    deps:
+    - path: data/loans_clean.csv
+      hash: md5
+      md5: 20e83258a49f2ef654fe2a9d752ea2e3
+      size: 59
+    - path: scripts/train.py
+      hash: md5
+      md5: 76b1ddd4ebb272b1fcc84abc75d0df17
+      size: 1056
+    outs:
+    - path: models/model.pkl
+      hash: md5
+      md5: 0e183de24332bf7821054b78c374811f
+      size: 1300
+  evaluate:
+    cmd: py scripts/evaluate.py
+    deps:
+    - path: models/model.pkl
+      hash: md5
+      md5: 0e183de24332bf7821054b78c374811f
+      size: 1300
+    - path: scripts/evaluate.py
+      hash: md5
+      md5: 054fb3aaea96773447fc992212c17f76
+      size: 1110
+    outs:
+    - path: metrics.json
+      hash: md5
+      md5: 3e9bb77823e601954085391544c4c8a4
+      size: 55
