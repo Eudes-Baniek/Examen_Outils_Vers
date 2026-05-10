@@ -24,6 +24,7 @@ flowchart LR
   Frontend --> LivresService
   Frontend --> EmpruntsService
   Frontend --> RecoApi
+  Frontend --> UtilisateursService
 
   LivresService --> Postgres
   UtilisateursService --> Postgres

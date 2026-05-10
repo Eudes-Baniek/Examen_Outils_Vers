@@ -1,0 +1,10 @@
+{
+  "name": "biblio-frontend",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter shadcn-dashboard-vite dev",
+    "build": "pnpm --filter shadcn-dashboard-vite build",
+    "lint": "pnpm --filter shadcn-dashboard-vite lint",
+    "preview": "pnpm --filter shadcn-dashboard-vite preview"
+  }
+}

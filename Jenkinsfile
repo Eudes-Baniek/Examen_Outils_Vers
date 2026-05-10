@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   environment {
-    COMPOSE_DEV = "infra/compose/docker-compose.dev.yml"
+    COMPOSE_STACK = "infra/compose/docker-compose.yml"
   }
 
   stages {
@@ -15,6 +15,9 @@ pipeline {
     stage('Python lint (basic)') {
       steps {
         bat 'python -m py_compile services\\livres\\main.py'
+        bat 'python -m py_compile services\\emprunts\\main.py'
+        bat 'python -m py_compile services\\reco\\main.py'
+        bat 'python -m py_compile services\\utilisateurs\\main.py'
         bat 'python -m py_compile scripts\\seed_db.py'
         bat 'python -m py_compile scripts\\export_data.py'
         bat 'python -m py_compile ml\\src\\preprocess.py'
@@ -25,19 +28,22 @@ pipeline {
 
     stage('Build images') {
       steps {
-        bat 'docker compose -f %COMPOSE_DEV% build'
+        bat 'docker compose -f %COMPOSE_STACK% build'
       }
     }
 
     stage('Start stack') {
       steps {
-        bat 'docker compose -f %COMPOSE_DEV% up -d'
+        bat 'docker compose -f %COMPOSE_STACK% up -d'
       }
     }
 
-    stage('Smoke test (Livres)') {
+    stage('Smoke test (services API)') {
       steps {
-        bat 'powershell -NoProfile -Command "Start-Sleep -Seconds 5; (Invoke-RestMethod http://localhost:8001/).status"'
+        bat 'powershell -NoProfile -Command "Start-Sleep -Seconds 8; Invoke-RestMethod http://localhost:8001/"'
+        bat 'powershell -NoProfile -Command "Invoke-RestMethod http://localhost:8002/"'
+        bat 'powershell -NoProfile -Command "Invoke-RestMethod http://localhost:8003/"'
+        bat 'powershell -NoProfile -Command "Invoke-RestMethod http://localhost:8004/"'
       }
     }
 
@@ -53,7 +59,7 @@ pipeline {
 
   post {
     always {
-      bat 'docker compose -f %COMPOSE_DEV% down -v'
+      bat 'docker compose -f %COMPOSE_STACK% down -v'
     }
   }
 }

@@ -1,0 +1,3 @@
+packages:
+  # App React + Vite + shadcn (celle utilisée pour le projet)
+  - vite-version
