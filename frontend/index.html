@@ -81,7 +81,6 @@
                 <h3>🤖 Recommandations IA</h3>
                 <div id="reco-status" style="font-size: 0.8rem; color: #64748b; margin-bottom: 10px;">Suggestions basées sur votre profil :</div>
                 <ul id="reco-list"></ul>
-                <button class="btn-ia btn-small" style="margin-top: 10px;" onclick="triggerTrain()">Réentraîner l'IA (DVC)</button>
             </div>
         </div>
 
@@ -160,12 +159,14 @@
         document.getElementById('main-dashboard').style.display = 'block';
         loadBooks();
         loadHistory();
-        getRecommendations(user.id);
     }
 
     async function loadBooks() {
         const res = await fetch(`${API_BOOKS}/books`);
-        if (res.ok) renderBooks(await res.json());
+        if (res.ok) {
+            renderBooks(await res.json());
+            if (currentUser) getRecommendations(currentUser.id);
+        }
     }
 
     function renderBooks(books) {
@@ -192,21 +193,20 @@
         list.innerHTML = "<li>Calcul IA...</li>";
         try {
             const res = await fetch(`${API_RECO}/recommendations/${userId}?t=${Date.now()}`);
-            if (res.ok) {
-                const recos = await res.json();
-                if(recos.length > 0) {
-                    list.innerHTML = recos.map(r => `<li><b>${r.titre}</b><br><small>Score de pertinence IA</small></li>`).join('');
-                } else { list.innerHTML = "<li>Pas assez de données pour l'IA.</li>"; }
+            if (!res.ok) {
+                list.innerHTML = "<li>Suggestions indisponibles pour le moment.</li>";
+                return;
             }
-        } catch(e) { list.innerHTML = "<li>Modèle ML indisponible.</li>"; }
-    }
-
-    async function triggerTrain() {
-        if(!confirm("Lancer dvc repro pour mettre à jour le modèle ?")) return;
-        try {
-            const res = await fetch(`${API_RECO}/train`, { method: 'POST' });
-            if(res.ok) alert("Pipeline DVC déclenché !");
-        } catch(e) { alert("Erreur lors du déclenchement DVC."); }
+            const recos = await res.json();
+            if (recos.length > 0) {
+                list.innerHTML = recos.map(r => `<li><b>${r.titre}</b><br><small>${r.auteur || "Auteur inconnu"}</small></li>`).join('');
+            } else {
+                list.innerHTML = "<li>Aucune suggestion pour le moment.</li>";
+            }
+        } catch(e) {
+            console.error("Recommandations:", e);
+            list.innerHTML = "<li>Service de recommandations indisponible.</li>";
+        }
     }
 
     async function searchBooks() {
@@ -255,7 +255,7 @@
                     tbody.innerHTML = history.map(h => `
                         <tr>
                             <td>Livre #${h.book_id}</td>
-                            <td>${new Date().toLocaleDateString()}</td>
+                            <td>${h.date_emprunt ? new Date(h.date_emprunt).toLocaleDateString() : new Date().toLocaleDateString()}</td>
                             <td><span class="status-badge status-active">Actif</span></td>
                         </tr>`).join('');
                 }

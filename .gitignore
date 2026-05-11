@@ -11,6 +11,10 @@ venv/
 # Base de données (très important pour ne pas saturer Git)
 postgres_data/
 
+# Artefacts générés par le pipeline DVC
+data/loans_clean.csv
+metrics.json
+
 # IDE
 .vscode/
 .idea/

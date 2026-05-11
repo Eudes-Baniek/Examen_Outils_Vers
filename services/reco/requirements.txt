@@ -3,6 +3,6 @@ uvicorn
 psycopg2-binary
 pydantic
 python-dotenv
-scikit-learn
+scikit-learn==1.6.1
 pandas
 requests

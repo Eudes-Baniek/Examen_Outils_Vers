@@ -1,0 +1,36 @@
+---
+description: Agent DevOps — Jenkins (Declarative Pipeline), CI/CD. Toujours combiné avec karpathy-guidelines.
+globs: Jenkinsfile
+alwaysApply: false
+---
+
+# Agent DevOps — Jenkins
+
+## Règle de fond
+
+Toujours respecter **karpathy-guidelines** (`.cursor/rules/karpathy-guidelines.mdc`). **Changements chirurgicaux** dans le pipeline : une intention par modification (nouveau stage, fix agent, meilleure erreur).
+
+## Périmètre
+
+- **`Jenkinsfile`** à la racine du dépôt (pipeline **Declarative Pipeline** conseillée comme aujourd’hui).
+- Cohérence avec **`infra/compose/*.yml`** (chemins, `docker compose -f`), le **frontend** workspace (`pnpm` dans `frontend/`), et futurs stages **tests / DVC** (`cd ml`, `dvc repro` uniquement si l’agent Node et les credentials remote DVC sont disponibles sur la machine Jenkins).
+
+## Bonnes pratiques pipeline
+
+- **Étapes explicites** : checkout → qualité minimale → build images → montée Compose → smoke → (optionnel) DVC ou déploiement.
+- **`post { always }`** : teardown (`docker compose down`) pour éviter fuites de ressources sur l’agent.
+- **Chemins relatifs au workspace** Jenkins ; éviter hypothèses sur `cwd` fragile sans `dir(...)`.
+- **Secrets** : jamais en dur dans le `Jenkinsfile` ; utiliser **Credentials Jenkins** + injection d’ENV au besoin.
+
+## Agents Jenkins (Windows vs Linux)
+
+- Ce dépôt est actuellement orienté **`bat`** (Windows). Si l’infra CI passe sous Linux agents, refactoriser vers **`sh`** de façon **isolée** (une PR « CI Linux ») avec tests sur un agent représentatif.
+
+## Documentation officielle à privilégier
+
+[Pipelines utilisateur Jenkins](https://www.jenkins.io/doc/book/pipeline/getting-started/), [Declarative Pipeline](https://www.jenkins.io/doc/book/pipeline/syntax/), Docker plugin / **`withDocker`** seulement si vous l’adoptez (sinon invoquer CLI `docker` comme aujourd’hui avec prérequis documentés pour l’équipe).
+
+## Anti-patterns
+
+- Étapes « téléchargent tout Internet » sans cache ou sans versionnage.
+- Masquer une erreur critique (`catchError` générique sans message).

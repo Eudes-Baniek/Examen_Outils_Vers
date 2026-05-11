@@ -7,7 +7,6 @@ WORKDIR /app
 # Installation des dépendances (en root pour garantir l'accès global)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install fastapi uvicorn scikit-learn==1.8.0 pandas numpy
 
 # Sécurité : Créer l'utilisateur pour l'exécution
 RUN useradd -m dit_user && chown -R dit_user:dit_user /app

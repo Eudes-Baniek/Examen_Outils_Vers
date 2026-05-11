@@ -1,9 +1,9 @@
 # services-loans/main.py
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 import csv
-from fastapi import FastAPI
+import os
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -22,22 +22,25 @@ async def get_history():
     return db_loans
 
 
+@app.get("/loans/user/{user_id}")
+async def get_user_history(user_id: int):
+    return [loan for loan in db_loans if loan.get("user_id") == user_id]
+
+
 @app.get("/loans/export")
 async def export_loans():
-    # Simulation d'export depuis ta DB PostgreSQL/MySQL
-    # Le but est de créer le fichier que DVC va ensuite traiter
-    output_path = "../data/loans.csv"
-    
-    # On récupère les données de la base (exemple simplifié)
+    output_path = os.getenv("LOANS_EXPORT_PATH", "/data/loans.csv")
     loans_data = [
-        {"user_id": 1, "book_id": 101},
-        {"user_id": 2, "book_id": 102},
-        {"user_id": 1, "book_id": 103}
+        {"user_id": loan["user_id"], "book_id": loan["book_id"]}
+        for loan in db_loans
     ]
-    
-    with open(output_path, mode='w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=["user_id", "book_id"])
+    if not loans_data:
+        raise HTTPException(status_code=400, detail="Aucun emprunt à exporter.")
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, mode="w", newline="", encoding="utf-8") as export_file:
+        writer = csv.DictWriter(export_file, fieldnames=["user_id", "book_id"])
         writer.writeheader()
         writer.writerows(loans_data)
-        
-    return {"status": "success", "message": f"Exporté vers {output_path}"}
+
+    return {"status": "success", "message": f"Exporté vers {output_path}", "rows": len(loans_data)}
