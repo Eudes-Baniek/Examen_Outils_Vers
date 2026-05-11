@@ -19,3 +19,4 @@ metrics.json
 .vscode/
 .idea/
 .env
+.cursor/
